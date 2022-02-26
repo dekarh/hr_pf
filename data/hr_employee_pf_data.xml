@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<flectra>
+    <data> <!-- noupdate="1"> -->
+        <record id="officetown_01" model="hr_pf.officetown">
+          <field name="name">Астрахань-ФинАгент</field>
+        </record>
+        <record id="officetown_02" model="hr_pf.officetown">
+          <field name="name">Астрахань-БЭК</field>
+        </record>
+        <record id="officetown_03" model="hr_pf.officetown">
+          <field name="name">Финтолк</field>
+        </record>
+        <record id="officetown_04" model="hr_pf.officetown">
+          <field name="name">Краснодар</field>
+        </record>
+        <record id="officetown_05" model="hr_pf.officetown">
+          <field name="name">Москва</field>
+        </record>
+        <record id="officetown_06" model="hr_pf.officetown">
+          <field name="name">Брянск</field>
+        </record>
+        <record id="officetown_07" model="hr_pf.officetown">
+          <field name="name">Владивосток</field>
+        </record>
+        <record id="officetown_08" model="hr_pf.officetown">
+          <field name="name">Волгоград</field>
+        </record>
+        <record id="officetown_09" model="hr_pf.officetown">
+          <field name="name">Казань</field>
+        </record>
+        <record id="officetown_10" model="hr_pf.officetown">
+          <field name="name">Кострома</field>
+        </record>
+        <record id="officetown_11" model="hr_pf.officetown">
+          <field name="name">Нижний Новгород</field>
+        </record>
+        <record id="officetown_12" model="hr_pf.officetown">
+          <field name="name">Ростов-на-Дону</field>
+        </record>
+        <record id="officetown_13" model="hr_pf.officetown">
+          <field name="name">Санкт-Петербург</field>
+        </record>
+        <record id="officetown_14" model="hr_pf.officetown">
+          <field name="name">Тула</field>
+        </record>
+        <record id="officetown_15" model="hr_pf.officetown">
+          <field name="name">Ярославль</field>
+        </record>
+    </data>
+</flectra>

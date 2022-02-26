@@ -1,0 +1,46 @@
+<flectra>
+  <data>
+    <!-- Сотрудники -->
+    <record id="view_hr_employee_pf_form" model="ir.ui.view">
+      <field name="name">hr.employee.pf.inherit</field>
+      <field name="model">hr.employee</field>
+      <field name="inherit_id" ref="hr.view_employee_form"/>
+      <field name="arch" type="xml">
+        <xpath expr="//notebook[last()]" position="inside">
+          <page string="Синхронизация ПланФикс" name="pf_sync">
+            <group>
+              <group string="Из юзеров">
+                <field name="id_pf"/>
+                <field name="general_user_pf"/>
+              </group>
+              <group string="Из справочников">
+                <field name="officetown_id"/>
+              </group>
+            </group>
+            <group>
+              <group string="Из контактов">
+                <field name="userid_pf"/>
+                <field name="general_contact_pf"/>
+              </group>
+            </group>
+          </page>
+        </xpath>
+      </field>
+    </record>
+
+    <!-- Подразделения (отделы) -->
+    <record id="view_hr_department_pf_form" model="ir.ui.view">
+      <field name="name">hr.department.pf.inherit</field>
+      <field name="model">hr.department</field>
+      <field name="inherit_id" ref="hr.view_department_form"/>
+      <field name="arch" type="xml">
+        <xpath expr="//group[last()]" position="after">
+          <group string="Состав группы">
+            <field name="member_ids"/>
+          </group>
+        </xpath>
+      </field>
+    </record>
+
+  </data>
+</flectra>
