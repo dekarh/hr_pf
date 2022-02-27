@@ -46,5 +46,11 @@
         <record id="officetown_15" model="hr_pf.officetown">
           <field name="name">Ярославль</field>
         </record>
+        <record id="test_1" model="hr.projectgroup">
+          <field name="name">Тестовая группа проекта 1</field>
+        </record>
+        <record id="test_2" model="hr.projectgroup">
+          <field name="name">Тестовая группа проекта 2</field>
+        </record>
     </data>
 </flectra>
