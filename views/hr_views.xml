@@ -81,6 +81,9 @@
                         <field name="parent_id"/>
                         <field name="company_id" options="{'no_create': True}" groups="base.group_multi_company"/>
                     </group>
+                    <group string="Состав группы">
+                        <field name="member_ids"/>
+                    </group>
                 </sheet>
                 <div class="oe_chatter">
                     <field name="message_follower_ids" widget="mail_followers" groups="base.group_user"/>

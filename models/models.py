@@ -46,8 +46,8 @@ class ProjectGroup(models.Model):
     parent_id = fields.Many2one('hr.projectgroup', string='Parent ProjectGroup', index=True)
     child_ids = fields.One2many('hr.projectgroup', 'parent_id', string='Child ProjectGroup')
     manager_id = fields.Many2one('hr.projectgroup', string='Manager', track_visibility='onchange')
-    #member_ids = fields.One2many('hr.projectgroup', 'projectgroup_id', string='Members', readonly=True)
-    #jobs_ids = fields.One2many('hr.job', 'projectgroup_id', string='Jobs')
+    member_ids = fields.One2many('hr.employee', 'projectgroup_id', string='Members', readonly=True)
+    jobs_ids = fields.One2many('hr.job', 'projectgroup_id', string='Jobs')
     note = fields.Text('Note')
     color = fields.Integer('Color Index')
 
