@@ -25,6 +25,9 @@
             </group>
           </page>
         </xpath>
+        <xpath expr="//field[@name='department_id']" position="after">
+          <field name="projectgroup_id"/>
+        </xpath>
       </field>
     </record>
 
@@ -77,12 +80,12 @@
                     </div>
                     <group col="4">
                         <field name="name"/>
-                        <field name="manager_id"/>
-                        <field name="parent_id"/>
+                        <field name="manager_pg_id"/>
+                        <field name="parent_pg_id"/>
                         <field name="company_id" options="{'no_create': True}" groups="base.group_multi_company"/>
                     </group>
                     <group string="Состав группы">
-                        <field name="member_ids"/>
+                        <field name="member_pg_ids"/>
                     </group>
                 </sheet>
                 <div class="oe_chatter">
@@ -96,13 +99,13 @@
     <record id="view_projectgroup_tree" model="ir.ui.view">
         <field name="name">hr.projectgroup.tree</field>
         <field name="model">hr.projectgroup</field>
-        <field name="field_parent">child_ids</field>
+        <field name="field_parent">child_pg_ids</field>
         <field name="arch" type="xml">
             <tree string="Companies">
                 <field name="display_name"/>
                 <field name="company_id" groups="base.group_multi_company"/>
-                <field name="manager_id"/>
-                <field name="parent_id"/>
+                <field name="manager_pg_id"/>
+                <field name="parent_pg_id"/>
             </tree>
         </field>
     </record>
@@ -113,7 +116,7 @@
         <field name="arch" type="xml">
             <search string="ProjectGroups">
                 <field name="name" string="ProjectGroup"/>
-                <field name="manager_id" />
+                <field name="manager_pg_id" />
                 <filter string="Unread Messages" name="message_needaction" domain="[('message_needaction','=',True)]"/>
                 <separator/>
                 <filter string="Archived" name="inactive" domain="[('active','=',False)]"/>
@@ -128,7 +131,7 @@
             <kanban class="oe_background_grey o_kanban_dashboard o_hr_kanban">
                 <field name="name"/>
                 <field name="company_id"/>
-                <field name="manager_id"/>
+                <field name="manager_pg_id"/>
                 <field name="color"/>
                 <templates>
                     <t t-name="kanban-box">
