@@ -18,6 +18,7 @@ class HrEmployeePf(models.Model):
     general_user_pf = fields.Integer(string='id в адр.строке')
     userid_pf = fields.Integer(string='id для задач')
     general_contact_pf = fields.Integer(string='id в адр.строке')
+    status = fields.Char(string='Статус контакта в ПФ')
     officetown_id = fields.Many2one('hr_pf.officetown', string='Офис и Город')
     # Добавляем аналог  department_id - projectgroup_id. Для этого проводим рефакторинг по ключам:
     # 'department_id', 'hr.department', 'Department', 'parent', 'child', 'manager', 'member', 'jobs'
