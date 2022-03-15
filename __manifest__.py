@@ -17,7 +17,7 @@
     # Check https://github.com/flectra/flectra/blob/master/flectra/addons/base/module/module_data.xml
     # for the full list
     'category': 'Human Resources',
-    'version': '0.0.11',
+    'version': '0.0.12',
 
     # any module necessary for this one to work correctly
     'depends': ['base', 'hr'],

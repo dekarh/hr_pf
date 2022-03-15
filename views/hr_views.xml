@@ -213,6 +213,16 @@
         sequence="90"
         groups="hr.group_hr_user"/>
 
+    <record id="view_hr_groups_pf_form_inherit" model="ir.ui.view">
+      <field name="name">hr.groups.pf.inherit</field>
+      <field name="model">res.groups</field>
+      <field name="inherit_id" ref="base.view_groups_form"/>
+      <field name="arch" type="xml">
+        <xpath expr="//field[@name='share']" position="after">
+          <field name="id_from_pf"/>
+        </xpath>
+      </field>
+    </record>
 
   </data>
 </flectra>

@@ -14,9 +14,7 @@ PF_HEADER = {"Accept": 'application/xml', "Content-Type": 'application/xml'}
 RELOAD_ALL_FROM_API = False
 
 def create_record(id, model, sources):
-    """
-    Создаем запись БД flectra
-    """
+    """Создаем запись БД flectra"""
     record = objectify.Element('record', id=id, model=model)
     fields = []
     i = -1
@@ -33,7 +31,7 @@ def create_record(id, model, sources):
 
 
 def load_users_from_api():
-    '''Загрузка всех юзеров ПФ из АПИ'''
+    """Загрузка всех юзеров ПФ из АПИ в файл users.xml"""
     xml_string = ''
     i = 1
     while True:
@@ -62,7 +60,7 @@ def load_users_from_api():
 
 
 def load_contacts_from_api():
-    '''Загрузка всех контактов Сотрудников (группа №6532326) из АПИ ПФ'''
+    """Загрузка всех контактов Сотрудников (группа №6532326) из АПИ ПФ в файл contacts.xml"""
     xml_string = ''
     i = 1
     while True:
@@ -88,12 +86,36 @@ def load_contacts_from_api():
     except IOError:
         pass
 
+def load_group_names_from_api():
+    """ Загружаем из АПИ ПФ названия групп от id """
+    groups_id2names = {}
+    i = 1
+    while True:
+        answer = requests.post(
+            URL,
+            headers=PF_HEADER,
+            data='<request method="userGroup.getList"><account>' + PF_ACCOUNT
+                 + '</account><pageSize>100</pageSize><pageCurrent>' + str(i) + '</pageCurrent></request>',
+            auth=(USR_Tocken, PSR_Tocken)
+        )
+        if answer.text.find('count="0"/></response>') > -1:
+            break
+        else:
+            groups = xmltodict.parse(answer.text)['response']['userGroups']['userGroup']
+            for group in groups:
+               groups_id2names[group['id']] = group['name']
+        i += 1
+    return groups_id2names
+
 
 if __name__ == "__main__":
     # Если задано - обновляем данные из АПИ
     if RELOAD_ALL_FROM_API:
         load_contacts_from_api()
         load_users_from_api()
+
+    # Загружаем список групп
+    groups_id2names = load_group_names_from_api()
 
     # Загружаем данные сотрудников из .xml юзеров
     users_xml = ''
@@ -183,6 +205,7 @@ if __name__ == "__main__":
     for i, officetown in enumerate(OFFICETOWNS):   # OFFICETOWNS - list с именами офисегородов
         record = create_record('officetown_' + str(i), 'hr_pf.officetown', {'name': officetown})
         flectra_data.append(record)
+
 
     for i, employe in enumerate(employees):
         record = create_record(employe.replace('.','-'), 'hr.employee', employees[employe])
