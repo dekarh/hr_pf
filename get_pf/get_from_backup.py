@@ -89,6 +89,7 @@ def load_contacts_from_api():
 def load_group_names_from_api():
     """ Загружаем из АПИ ПФ названия групп от id """
     groups_id2names = {}
+    groups_id2members = {}
     i = 1
     while True:
         answer = requests.post(
@@ -103,9 +104,10 @@ def load_group_names_from_api():
         else:
             groups = xmltodict.parse(answer.text)['response']['userGroups']['userGroup']
             for group in groups:
-               groups_id2names[group['id']] = group['name']
+                groups_id2names[group['id']] = group['name']
+                groups_id2members[group['id']] = []
         i += 1
-    return groups_id2names
+    return groups_id2names, groups_id2members
 
 
 if __name__ == "__main__":
@@ -114,8 +116,8 @@ if __name__ == "__main__":
         load_contacts_from_api()
         load_users_from_api()
 
-    # Загружаем список групп
-    groups_id2names = load_group_names_from_api()
+    # Загружаем список групп и пустой список членов для каждой группы
+    groups_id2names, groups_id2members = load_group_names_from_api()
 
     # Загружаем данные сотрудников из .xml юзеров
     users_xml = ''
@@ -147,6 +149,12 @@ if __name__ == "__main__":
                 employees[user['email']]['general_user_pf'] = str(user['general'])
             if user.get('active', None):
                 employees[user['email']]['active'] = str(user['status'] == 'ACTIVE')
+            if user.get('userGroups', None):
+                if str(type(user['userGroups']['userGroup'])).find('list') > -1:
+                    for group in user['userGroups']['userGroup']:
+                        groups_id2members[group['id']] += [user['email']]
+                else:
+                    groups_id2members[user['userGroups']['userGroup']['id']] += [user['email']]
         else:
             print(str(user['id']), str(user['lastName']), str(user['name']), str(user['midName']), ' - нет e-mail')
 
@@ -201,11 +209,19 @@ if __name__ == "__main__":
         })
         flectra_data.append(record)
 
-    # Спарвочник офисов-городов
+    # Справочник офисов-городов
     for i, officetown in enumerate(OFFICETOWNS):   # OFFICETOWNS - list с именами офисегородов
         record = create_record('officetown_' + str(i), 'hr_pf.officetown', {'name': officetown})
         flectra_data.append(record)
 
+    # Группы доступа, сначала корневая группа "Планфикс"
+    record = create_record('category_pf', 'ir.module.category', {'name': 'ПланФикс'})
+    flectra_data.append(record)
+    for groups_id2name in groups_id2names:
+        record = create_record(groups_id2name, 'res.groups',{'name': groups_id2names[groups_id2name],
+                                                             'category_id': 'category_pf',
+                                                             'id_from_pf': 'group_' + str(groups_id2name)})
+        flectra_data.append(record)
 
     for i, employe in enumerate(employees):
         record = create_record(employe.replace('.','-'), 'hr.employee', employees[employe])

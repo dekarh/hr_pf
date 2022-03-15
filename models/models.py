@@ -108,10 +108,10 @@ class ProjectGroup(models.Model):
         employees.write({'parent_pg_id': manager_pg_id})
 
 
-class AccountGroupsPF(models.Model):
+class GroupsPF(models.Model):
     """Дополнительные поля в группу доступа для синхронизации с ПФ"""
     _inherit = 'res.groups'
 
-    id_from_pf = fields.Integer(string='Идентификатор группы ПФ')
+    id_from_pf = fields.Char(string='Идентификатор группы ПФ')
 
 
