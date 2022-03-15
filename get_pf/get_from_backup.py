@@ -35,7 +35,8 @@ def create_record(id, model, sources):
 def load_users_from_api():
     '''Загрузка всех юзеров ПФ из АПИ'''
     xml_string = ''
-    for i in range(1, 5):
+    i = 1
+    while True:
         answer = requests.post(
             URL,
             headers=PF_HEADER,
@@ -44,8 +45,12 @@ def load_users_from_api():
                  str(i) + '</pageCurrent></request>',
             auth=(USR_Tocken, PSR_Tocken)
         )
-        xml_string += str(answer.text).replace('<response status="ok">', '').replace('</response>', '') \
-            .replace('<?xml version="1.0" encoding="UTF-8"?>', '').replace('</users>', '')
+        if answer.text.find('count="0"/></response>') > -1:
+            break
+        else:
+            xml_string += str(answer.text).replace('<response status="ok">', '').replace('</response>', '') \
+                .replace('<?xml version="1.0" encoding="UTF-8"?>', '').replace('</users>', '')
+        i += 1
     while xml_string.find('<users totalCount=') > -1:
         xml_string = xml_string[:xml_string.find('<users totalCount=')] + \
                      xml_string[xml_string.find('>', xml_string.find('<users totalCount=')) + 1:]
@@ -59,7 +64,8 @@ def load_users_from_api():
 def load_contacts_from_api():
     '''Загрузка всех контактов Сотрудников (группа №6532326) из АПИ ПФ'''
     xml_string = ''
-    for i in range(1, 7):
+    i = 1
+    while True:
         answer = requests.post(
             URL,
             headers=PF_HEADER,
@@ -67,8 +73,12 @@ def load_contacts_from_api():
                  '</account><pageCurrent>' + str(i) +
                  '</pageCurrent><pageSize>100</pageSize><target>6532326</target></request>' ,
             auth=(USR_Tocken, PSR_Tocken))
-        xml_string += str(answer.text).replace('<response status="ok">','').replace('</response>','')\
-            .replace('<?xml version="1.0" encoding="UTF-8"?>','').replace('</contacts>','')
+        if answer.text.find('count="0"/></response>') > -1:
+            break
+        else:
+            xml_string += str(answer.text).replace('<response status="ok">','').replace('</response>','')\
+                .replace('<?xml version="1.0" encoding="UTF-8"?>','').replace('</contacts>','')
+        i += 1
     while xml_string.find('<contacts totalCount=') > -1:
         xml_string = xml_string[:xml_string.find('<contacts totalCount=')] + \
                      xml_string[xml_string.find('>',xml_string.find('<contacts totalCount=')) + 1:]
@@ -190,7 +200,7 @@ if __name__ == "__main__":
                              )
 
     try:
-        with open("../data/hr_employee_pf_data.xml", "wb") as xml_writer:
+        with open("../data/hr_pf_data.xml", "wb") as xml_writer:
             xml_writer.write(obj_xml)
     except IOError:
         pass

@@ -3,11 +3,11 @@
     'name': "hr_pf",
 
     'summary': """
-        Дополнительные поля для модулей hr для сохранения связей с данными из ПланФикса 
+        Импорт данных и дополнительные поля для модулей hr для сохранения связей с данными из ПланФикса 
     """,
 
     'description': """
-        Дополнительные поля для модулей hr Flectra(odoo) для сохранения связей с данными из ПланФикса 
+        Импорт данных и дополнительные поля для модулей hr для сохранения связей с данными из ПланФикса
     """,
 
     'author': "Денис Алексеев",
@@ -17,7 +17,7 @@
     # Check https://github.com/flectra/flectra/blob/master/flectra/addons/base/module/module_data.xml
     # for the full list
     'category': 'Human Resources',
-    'version': '0.0.10',
+    'version': '0.0.11',
 
     # any module necessary for this one to work correctly
     'depends': ['base', 'hr'],
@@ -26,7 +26,7 @@
     'data': [
         # 'security/ir.model.access.csv',
         'views/hr_views.xml',
-        'data/hr_employee_pf_data.xml'
+        'data/hr_pf_data.xml'
     ],
     # only loaded in demonstration mode
     'demo': [
