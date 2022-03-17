@@ -17,7 +17,7 @@
     # Check https://github.com/flectra/flectra/blob/master/flectra/addons/base/module/module_data.xml
     # for the full list
     'category': 'Human Resources',
-    'version': '0.0.13',
+    'version': '0.0.11',
 
     # any module necessary for this one to work correctly
     'depends': ['base', 'hr'],
@@ -25,7 +25,7 @@
     # always loaded
     'data': [
         # 'security/ir.model.access.csv',
-        'views/hr_views.xml',
+        'views/pf_views.xml',
         'data/hr_pf_data.xml'
     ],
     # only loaded in demonstration mode

@@ -11,13 +11,18 @@ class Towns(models.Model):
     name = fields.Char(string='Офисы в Городах')
 
 
-class HrEmployeePf(models.Model):
-    _inherit = 'hr.employee'
+class UsersPF(models.Model):
+    _inherit = 'res.users'
     # Поля для синхронизации с ПФ
     id_pf = fields.Integer(string='id Глобальный')
     general_user_pf = fields.Integer(string='id в адр.строке')
     userid_pf = fields.Integer(string='id для задач')
     general_contact_pf = fields.Integer(string='id в адр.строке')
+
+
+class HrEmployeePf(models.Model):
+    _inherit = 'hr.employee'
+    # Поля для синхронизации с ПФ
     status = fields.Char(string='Статус контакта в ПФ')
     officetown_id = fields.Many2one('hr_pf.officetown', string='Офис и Город')
     # Добавил аналог  department_id - projectgroup_id. Для этого провел рефакторинг по ключам:

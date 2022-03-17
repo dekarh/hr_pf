@@ -3,6 +3,7 @@
 import json
 import os
 import requests
+import csv
 import xmltodict
 from lxml import etree, objectify
 
@@ -127,12 +128,23 @@ if __name__ == "__main__":
     users_dict = xmltodict.parse(users_xml)
     users_db = {}
     employees = {}
-    # Переводим в формат users_db[email], заполняем БД слияния контактов и юзеров employees[e-mail]
+    users = {}
+    users2groups = {}
+    # Переводим в формат users_db[email], заполняем БД слияния контактов и юзеров employees[e-mail] и users[e-mail]
     for user in users_dict['users']['user']:
         if user.get('email', None):
             users_db[user['email']] = user
-            employees[user['email']] = {'name': str(user['lastName']) + ' ' + str(user['name']) + ' '
-                                                + str(user['midName'])}
+            if user['midName']:
+                employees[user['email']] = {'name': str(user['lastName']) + ' ' + str(user['name']) + ' '
+                                                    + str(user['midName'])}
+                users[user['email']] = {'name': str(user['lastName']) + ' ' + str(user['name']) + ' '
+                                                    + str(user['midName'])}
+                users2groups[user['email']] = set()
+            else:
+                employees[user['email']] = {'name': str(user['lastName']) + ' ' + str(user['name'])}
+                users[user['email']] = {'name': str(user['lastName']) + ' ' + str(user['name'])}
+                users2groups[user['email']] = set()
+            users[user['email']]['login'] = user['email']
             employees[user['email']]['work_email'] = user['email']
             if user.get('phones', None):
                 if user['phones']:
@@ -144,15 +156,16 @@ if __name__ == "__main__":
             if user.get('sex', None):
                 employees[user['email']]['gender'] = str(user['sex']).lower()
             if user.get('id', None):
-                employees[user['email']]['id_pf'] = str(user['id'])
+                users[user['email']]['id_pf'] = str(user['id'])
             if user.get('general', None):
-                employees[user['email']]['general_user_pf'] = str(user['general'])
+                users[user['email']]['general_user_pf'] = str(user['general'])
             if user.get('active', None):
-                employees[user['email']]['active'] = str(user['status'] == 'ACTIVE')
+                users[user['email']]['active'] = str(user['status'] == 'ACTIVE')
             if user.get('userGroups', None):
                 if str(type(user['userGroups']['userGroup'])).find('list') > -1:
                     for group in user['userGroups']['userGroup']:
                         groups_id2members[group['id']] += [user['email']]
+                        users2groups[user['email']].add(group['id'])
                 else:
                     groups_id2members[user['userGroups']['userGroup']['id']] += [user['email']]
         else:
@@ -175,20 +188,41 @@ if __name__ == "__main__":
             contacts_db[email] = contact
             if not employees.get(email, None):
                 employees[email] = {}
-            employees[email]['work_email'] = email
-            employees[email]['general_contact_pf'] = contact['general']
-            employees[email]['userid_pf'] = contact['userid']
+                users[email] = {'login': email}
+                employees[email]['work_email'] = email
+            users[email]['general_contact_pf'] = contact['general']
+            users[email]['userid_pf'] = contact['userid']
             for field in contact['customData']['customValue']:
-                if field['field']['name'] == 'ФИО' and employees[email].get('name', '').find('None') == -1:
-                    employees[email]['name'] = field['text']
+                if field['field']['name'] == 'ФИО':
+                    if employees[email].get('name', None):
+                        if len(str(field['text']).strip().split(' ')) > \
+                              len(str(employees[email]['name']).strip().split(' ')):
+                            employees[email]['name'] = field['text']
+                            users[email]['name'] = field['text']
+                    else:
+                        employees[email]['name'] = field['text']
+                        users[email]['name'] = field['text']
+                #if field['field']['name'] == 'Город':
+                #if field['field']['name'] == 'д/р сотрудника':
                 if field['field']['name'] == 'Статус':
                     employees[email]['status'] = field['text']
+                    users[email]['active'] = str(field['text'] == 'Активный')
+                    employees[email]['active'] = str(field['text'] == 'Активный')
                 if field['field']['name'] == 'Подразделение (отдел)' and field['text']:
                     if field['text'] == 'ПродБлок':
                         field['text'] = 'Продуктовый блок'
                     employees[email]['department_id'] = 'department_' +  str(DEPARTMENTS.index(str(field['text'])))
         else:
             print(str(contact['id']), str(contact['general']), ' - нет e-mail')
+
+    for user in users:
+        users[user]['id'] = user.replace('.','_')
+        if users2groups.get(user, None):
+            if len(users2groups[user]):
+                users[user]['groups_id'] = ''
+                for group in users2groups[user]:
+                    users[user]['groups_id'] += 'hr_pf.' + group + ','
+                users[user]['groups_id'] = users[user]['groups_id'].strip(',')
 
     # Заголовок xml
     flectra_root = objectify.Element('flectra')
@@ -220,8 +254,19 @@ if __name__ == "__main__":
     for groups_id2name in groups_id2names:
         record = create_record(groups_id2name, 'res.groups',{'name': groups_id2names[groups_id2name],
                                                              'category_id': 'category_pf',
-                                                             'id_from_pf': 'group_' + str(groups_id2name)})
+                                                             'id_from_pf': str(groups_id2name)})
         flectra_data.append(record)
+
+    with open('../data/users.csv', 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=['id', 'name', 'login', 'active', 'id_pf',
+                                                     'general_user_pf', 'general_contact_pf', 'userid_pf', 'groups_id'])
+        writer.writeheader()
+        for user in users:
+            writer.writerow(users[user])
+
+    #for i, user in enumerate(users):
+    #    record = create_record(user.replace('.','_'), 'res.users', users[user])
+    #    flectra_data.append(record)
 
     for i, employe in enumerate(employees):
         record = create_record(employe.replace('.','-'), 'hr.employee', employees[employe])
