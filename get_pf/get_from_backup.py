@@ -215,14 +215,34 @@ if __name__ == "__main__":
         else:
             print(str(contact['id']), str(contact['general']), ' - нет e-mail')
 
+    i = 1
+    users4employees = {}
     for user in users:
-        users[user]['id'] = user.replace('.','_')
+        if users[user].get('id_pf', None):
+            users[user]['id'] = 'user_' + users[user]['id_pf']
+        elif users[user].get('userid_pf', None):
+            users[user]['id'] = 'user_' + users[user]['userid_pf']
+        else:
+            users[user]['id'] = 'user_' + str(i)
+            i += 1
         if users2groups.get(user, None):
             if len(users2groups[user]):
                 users[user]['groups_id'] = ''
                 for group in users2groups[user]:
                     users[user]['groups_id'] += 'hr_pf.' + group + ','
                 users[user]['groups_id'] = users[user]['groups_id'].strip(',')
+
+    i = 1
+    sotrudniki = {}
+    for employee in employees:
+        if users.get(employee, None):
+            if users[employee].get('id_pf', None):
+                sotrudniki['empl_' + users[employee]['id_pf']] = employees[employee]
+            elif users[employee].get('userid_pf', None):
+                sotrudniki['empl_' + users[employee]['userid_pf']] = employees[employee]
+            else:
+                sotrudniki['empl_' + str(i)] = employees[employee]
+                i += 1
 
     # Заголовок xml
     flectra_root = objectify.Element('flectra')
@@ -248,7 +268,7 @@ if __name__ == "__main__":
         record = create_record('officetown_' + str(i), 'hr_pf.officetown', {'name': officetown})
         flectra_data.append(record)
 
-    # Группы доступа, сначала корневая группа "Планфикс"
+    # Группы доступа, сначала корневая группа "Планфикс" в .xml
     record = create_record('category_pf', 'ir.module.category', {'name': 'ПланФикс'})
     flectra_data.append(record)
     for groups_id2name in groups_id2names:
@@ -257,6 +277,7 @@ if __name__ == "__main__":
                                                              'id_from_pf': str(groups_id2name)})
         flectra_data.append(record)
 
+    # Юзеры в .csv
     with open('../data/users.csv', 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=['id', 'name', 'login', 'active', 'id_pf',
                                                      'general_user_pf', 'general_contact_pf', 'userid_pf', 'groups_id'])
@@ -268,8 +289,9 @@ if __name__ == "__main__":
     #    record = create_record(user.replace('.','_'), 'res.users', users[user])
     #    flectra_data.append(record)
 
-    for i, employe in enumerate(employees):
-        record = create_record(employe.replace('.','-'), 'hr.employee', employees[employe])
+    # Сотрудники в .xml
+    for sotrudnik in sotrudniki:
+        record = create_record(sotrudnik, 'hr.employee', sotrudniki[sotrudnik])
         flectra_data.append(record)
 
     # удаляем все lxml аннотации.
