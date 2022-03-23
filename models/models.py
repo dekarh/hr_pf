@@ -30,6 +30,8 @@ class HrEmployeePf(models.Model):
     parent_pg_id = fields.Many2one('hr.employee', 'Manager ProjectGroup')
     child_pg_ids = fields.One2many('hr.employee', 'parent_pg_id', string='Subordinates')
     projectgroup_id = fields.Many2one('hr.projectgroup', string='ProjectGroup')
+    id_pf = fields.Integer(string='Глобальный id юзера из ПФ')
+
 
     @api.onchange('projectgroup_id')
     def _onchange_projectgroup(self):

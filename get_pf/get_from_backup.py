@@ -238,10 +238,13 @@ if __name__ == "__main__":
         if users.get(employee, None):
             if users[employee].get('id_pf', None):
                 sotrudniki['empl_' + users[employee]['id_pf']] = employees[employee]
+                sotrudniki['empl_' + users[employee]['id_pf']]['id_pf'] = users[employee]['id_pf']
             elif users[employee].get('userid_pf', None):
                 sotrudniki['empl_' + users[employee]['userid_pf']] = employees[employee]
+                sotrudniki['empl_' + users[employee]['userid_pf']]['id_pf'] = users[employee]['userid_pf']
             else:
                 sotrudniki['empl_' + str(i)] = employees[employee]
+                sotrudniki['empl_' + str(i)]['id_pf'] = str(i)
                 i += 1
 
     # Заголовок xml
