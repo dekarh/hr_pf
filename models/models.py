@@ -11,7 +11,7 @@ class Towns(models.Model):
     name = fields.Char(string='Офисы в Городах')
 
 
-class UsersPF(models.Model):
+class UsersPF(models.Model):            # 'user_' + id_pf
     _inherit = 'res.users'
     # Поля для синхронизации с ПФ
     id_pf = fields.Integer(string='id Глобальный')
@@ -20,7 +20,7 @@ class UsersPF(models.Model):
     general_contact_pf = fields.Integer(string='id в адр.строке')
 
 
-class HrEmployeePf(models.Model):
+class HrEmployeePf(models.Model):       # 'empl_' + id_pf
     _inherit = 'hr.employee'
     # Поля для синхронизации с ПФ
     status = fields.Char(string='Статус контакта в ПФ')

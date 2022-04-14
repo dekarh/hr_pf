@@ -9,130 +9,66 @@ from lxml import etree, objectify
 
 from lib import format_phone
 from hide_data import OFFICETOWNS, DEPARTMENTS, URL, USR_Tocken, PSR_Tocken, PF_ACCOUNT
+from refresh_all_from_api import reload_all, api_load_from_list
 
-PF_BACKUP_DIRECTORY = 'planfix-data-202202182037'
+PF_BACKUP_DIRECTORY = 'current'
 PF_HEADER = {"Accept": 'application/xml', "Content-Type": 'application/xml'}
 RELOAD_ALL_FROM_API = False
 
 def create_record(id, model, sources):
-    """Создаем запись БД flectra"""
+    """  Создаем запись БД flectra  """
     record = objectify.Element('record', id=id, model=model)
     fields = []
     i = -1
     for source in sources:
-        i += 1
-        if str(source).endswith('_id'):
+        if str(source).endswith('_id') or str(source).endswith('_uid'):
+            i += 1
             fields.append(objectify.SubElement(record, 'field', name=source, ref=sources[source]))
+        elif str(source).endswith('_ids'):
+            i += 1
+            attr = "[(6, 0, [ ref('" + "'), ref('".join(sources[source]) + "')])]"
+            fields.append(objectify.SubElement(
+                record,
+                'field',
+                name=source,
+                eval="[(6, 0, [ ref('" + "'), ref('".join(sources[source]) + "')])]"))
         elif source and sources[source]:
+            i += 1
             fields.append(objectify.SubElement(record, 'field', name=source))
-            fields[i]._setText(sources[source])
+            fields[i]._setText(str(sources[source]))
         else:
-            print(id, source, sources[source])
+            pass
+            # print(id, source, sources[source])
     return record
-
-
-def load_users_from_api():
-    """Загрузка всех юзеров ПФ из АПИ в файл users.xml"""
-    xml_string = ''
-    i = 1
-    while True:
-        answer = requests.post(
-            URL,
-            headers=PF_HEADER,
-            data='<request method="user.getList"><account>' + PF_ACCOUNT +
-                 '</account><pageSize>100</pageSize><pageCurrent>' +
-                 str(i) + '</pageCurrent></request>',
-            auth=(USR_Tocken, PSR_Tocken)
-        )
-        if answer.text.find('count="0"/></response>') > -1:
-            break
-        else:
-            xml_string += str(answer.text).replace('<response status="ok">', '').replace('</response>', '') \
-                .replace('<?xml version="1.0" encoding="UTF-8"?>', '').replace('</users>', '')
-        i += 1
-    while xml_string.find('<users totalCount=') > -1:
-        xml_string = xml_string[:xml_string.find('<users totalCount=')] + \
-                     xml_string[xml_string.find('>', xml_string.find('<users totalCount=')) + 1:]
-    try:
-        with open(os.path.join(PF_BACKUP_DIRECTORY, 'users.xml'), 'w') as xml_writer:
-            xml_writer.write('<?xml version="1.0" encoding="UTF-8"?>\n<users>\n' + xml_string + '\n</users>')
-    except IOError:
-        pass
-
-
-def load_contacts_from_api():
-    """Загрузка всех контактов Сотрудников (группа №6532326) из АПИ ПФ в файл contacts.xml"""
-    xml_string = ''
-    i = 1
-    while True:
-        answer = requests.post(
-            URL,
-            headers=PF_HEADER,
-            data='<request method="contact.getList"><account>' + PF_ACCOUNT +
-                 '</account><pageCurrent>' + str(i) +
-                 '</pageCurrent><pageSize>100</pageSize><target>6532326</target></request>' ,
-            auth=(USR_Tocken, PSR_Tocken))
-        if answer.text.find('count="0"/></response>') > -1:
-            break
-        else:
-            xml_string += str(answer.text).replace('<response status="ok">','').replace('</response>','')\
-                .replace('<?xml version="1.0" encoding="UTF-8"?>','').replace('</contacts>','')
-        i += 1
-    while xml_string.find('<contacts totalCount=') > -1:
-        xml_string = xml_string[:xml_string.find('<contacts totalCount=')] + \
-                     xml_string[xml_string.find('>',xml_string.find('<contacts totalCount=')) + 1:]
-    try:
-        with open(os.path.join(PF_BACKUP_DIRECTORY, 'contacts.xml'), 'w') as xml_writer:
-            xml_writer.write('<?xml version="1.0" encoding="UTF-8"?>\n<contacts>\n' + xml_string + '\n</contacts>')
-    except IOError:
-        pass
-
-def load_group_names_from_api():
-    """ Загружаем из АПИ ПФ названия групп от id """
-    groups_id2names = {}
-    groups_id2members = {}
-    i = 1
-    while True:
-        answer = requests.post(
-            URL,
-            headers=PF_HEADER,
-            data='<request method="userGroup.getList"><account>' + PF_ACCOUNT
-                 + '</account><pageSize>100</pageSize><pageCurrent>' + str(i) + '</pageCurrent></request>',
-            auth=(USR_Tocken, PSR_Tocken)
-        )
-        if answer.text.find('count="0"/></response>') > -1:
-            break
-        else:
-            groups = xmltodict.parse(answer.text)['response']['userGroups']['userGroup']
-            for group in groups:
-                groups_id2names[group['id']] = group['name']
-                groups_id2members[group['id']] = []
-        i += 1
-    return groups_id2names, groups_id2members
 
 
 if __name__ == "__main__":
     # Если задано - обновляем данные из АПИ
     if RELOAD_ALL_FROM_API:
-        load_contacts_from_api()
-        load_users_from_api()
+        reload_all()
 
     # Загружаем список групп и пустой список членов для каждой группы
-    groups_id2names, groups_id2members = load_group_names_from_api()
+    with open(os.path.join(PF_BACKUP_DIRECTORY, 'usergroups_full.json'), 'r') as read_file:
+        groups = json.load(read_file)
+    groups_id2names = {}
+    groups_id2members = {}
+    for group in groups:
+        groups_id2names[group] = groups[group]['name']
+        groups_id2members[group] = []
 
-    # Загружаем данные сотрудников из .xml юзеров
-    users_xml = ''
-    with open(os.path.join(PF_BACKUP_DIRECTORY, 'users.xml'), 'r') as file_handler:
-        for line in file_handler:
-            users_xml += line
-    users_dict = xmltodict.parse(users_xml)
+    # Загружаем данные юзеров из файла
+    with open(os.path.join(PF_BACKUP_DIRECTORY, 'users_full.json'), 'r') as read_file:
+        users_loaded = json.load(read_file)
+    users_list = list(users_loaded.values())
     users_db = {}
     employees = {}
     users = {}
     users2groups = {}
     # Переводим в формат users_db[email], заполняем БД слияния контактов и юзеров employees[e-mail] и users[e-mail]
-    for user in users_dict['users']['user']:
-        if user.get('email', None):
+    for user in users_list:
+        if user.get('email', None) or user.get('name', '') == 'робот ПланФикса':
+            if user.get('name', '') == 'робот ПланФикса':
+                user['email'] = 'robot_pf@finfort.ru'
             users_db[user['email']] = user
             if user['midName']:
                 employees[user['email']] = {'name': str(user['lastName']) + ' ' + str(user['name']) + ' '
@@ -171,15 +107,13 @@ if __name__ == "__main__":
         else:
             print(str(user['id']), str(user['lastName']), str(user['name']), str(user['midName']), ' - нет e-mail')
 
-    # Загружаем данные сотрудников из .xml контактов
-    contacts_xml = ''
-    with open(os.path.join(PF_BACKUP_DIRECTORY, 'contacts.xml'), 'r') as file_handler:
-        for line in file_handler:
-            contacts_xml += line
-    contacts_dict = xmltodict.parse(contacts_xml)
+    # Загружаем данные сотрудников из файла
+    with open(os.path.join(PF_BACKUP_DIRECTORY, 'contacts_finfort.json'), 'r') as read_file:
+        contacts_loaded = json.load(read_file)
+    contacts_list = list(contacts_loaded.values())
     contacts_db = {}
     # Переводим в формат users_db[email], заполняем БД сляния контактов и юзеров employees[e-mail]
-    for contact in contacts_dict['contacts']['contact']:
+    for contact in contacts_list:
         email = ''
         for field in contact['customData']['customValue']:
             if field['field']['name'] == 'Корпоративная почта':
@@ -281,12 +215,32 @@ if __name__ == "__main__":
         flectra_data.append(record)
 
     # Юзеры в .csv
-    with open('../data/users.csv', 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=['id', 'name', 'login', 'active', 'id_pf',
-                                                     'general_user_pf', 'general_contact_pf', 'userid_pf', 'groups_id'])
+    users4csv = {}
+    for user in users:
+        users4csv[user] = {}
+        for field in users[user].keys():
+            if field in ['id', 'name', 'login', 'active']:
+                users4csv[user][field] = users[user][field]
+    with open('../../users_pf/data/res.users.csv', 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=['id', 'name', 'login', 'active'])
         writer.writeheader()
         for user in users:
-            writer.writerow(users[user])
+            writer.writerow(users4csv[user])
+    users4csv = {}
+    for user in users:
+        users4csv[user] = {}
+        for field in users[user].keys():
+            if field in ['id', 'id_pf', 'general_user_pf', 'general_contact_pf', 'userid_pf', 'groups_id:id']:
+                if field == 'id':
+                    users4csv[user][field] = 'users_pf.' + users[user][field]
+                else:
+                    users4csv[user][field] = users[user][field]
+    with open('../data/res.users.csv', 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=['id', 'id_pf', 'general_user_pf', 'general_contact_pf',
+                                                     'userid_pf', 'groups_id:id'])
+        writer.writeheader()
+        for user in users:
+            writer.writerow(users4csv[user])
 
     #for i, user in enumerate(users):
     #    record = create_record(user.replace('.','_'), 'res.users', users[user])
