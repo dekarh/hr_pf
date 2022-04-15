@@ -34,9 +34,10 @@ def api_load_from_list(api_method, obj_name, file_name, api_additionally='', pag
     else:
         obj_names = obj_name + 's'
     i = 1
-    obj_count = 1000
-    if len(argv) == 1:
-        printProgressBar(0, obj_count, prefix='Скачано ' + api_method + ':', suffix=obj_name, length=50)
+    obj_total_count = 1000
+    obj_count = 0
+    if len(argv) == 1 and with_totalcount and file_name:
+        printProgressBar(obj_count, obj_total_count, prefix='Скачано ' + api_method + ':', suffix=obj_name, length=50)
         boost = '\n'
     else:
         boost = ''
@@ -86,31 +87,34 @@ def api_load_from_list(api_method, obj_name, file_name, api_additionally='', pag
                         elif str(type(xmltodict.parse(answer.text)['response'][obj_names][obj_name])).replace("'", '') \
                                 == '<class list>':
                             objs_loaded = xmltodict.parse(answer.text)['response'][obj_names][obj_name]
+                            obj_count += len(objs_loaded)
                         else:
                             objs_loaded = [xmltodict.parse(answer.text)['response'][obj_names][obj_name]]
+                            obj_count += 1
                         if with_totalcount:
-                            if obj_count < 1001:
-                                obj_count = int(xmltodict.parse(answer.text)['response'][obj_names]['@totalCount'])
+                            if obj_total_count == 1000:
+                                obj_total_count = int(
+                                    xmltodict.parse(answer.text)['response'][obj_names]['@totalCount'])
                         for obj in objs_loaded:
                             res_dict[int(obj[key_name])] = obj
                         if not pagination:
                             continuation = False
                         break
                 except Exception as e:
-                    print(e)
+                    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'), e)
                     if not pagination:
                         continuation = False
                     break
-            if len(argv) == 1:
-                printProgressBar(i * 100, obj_count, prefix='Скачано ' + api_method + ':', suffix=obj_name, length=50)
+            if len(argv) == 1 and with_totalcount and file_name:
+                printProgressBar(obj_count, obj_total_count, prefix='Скачано ' + api_method + ':', suffix=obj_name,
+                                 length=50)
             i += 1
     finally:
         if file_name:
             with open(os.path.join(PF_BACKUP_DIRECTORY, file_name), 'w') as write_file:
                 json.dump(res_dict, write_file, ensure_ascii=False)
-                print(boost, 'Сохранено ', len(res_dict), 'объектов', obj_name, 'запрошенных методом', api_method)
-        else:
-            print(boost, 'Передано ', len(res_dict), 'объектов', obj_name, 'запрошенных методом', api_method)
+                print(boost, datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                      'Сохранено ', len(res_dict), 'объектов', obj_name, 'запрошенных методом', api_method)
     return res_dict
 
 
@@ -134,39 +138,96 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     if iteration == total:
         print()
 
-#def chk_users(id):
-#    if int(id) in users.keys():
-#        return str(id)
-#    else:
-#        return '5309784'
 
 def reload_all():
+    files = {}
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          '\nЗагружаем юзеров, сотрудников, контакты, группы доступа и шаблоны задач')
     api_load_from_list('user.getList', 'user', 'users_full.json')
     api_load_from_list('contact.getList', 'contact', 'contacts_finfort.json',
                        api_additionally='<target>6532326</target>')
-    api_load_from_list('contact.getList', 'contact', 'contacts_full.json')
+    contacts = api_load_from_list('contact.getList', 'contact', 'contacts_full.json')
     api_load_from_list('userGroup.getList', 'userGroup', 'usergroups_full.json')
     api_load_from_list('task.getList', 'task', 'tasktemplates_full.json',
                        api_additionally='<target>template</target>')
 
-    # Загружаем список справочников
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          'Загружаем список файлов по каждому контакту')
+    printProgressBar(0, len(contacts), prefix='Скачаны все файлы по:', suffix='контактов', length=50)
+    for i, contact in enumerate(contacts):
+        addition_text = '<client><id>' + str(contact) + '</id></client>' \
+                        + '<returnDownloadLinks>1</returnDownloadLinks>'
+        files_loaded = api_load_from_list('file.getListForClient', 'file', '', api_additionally=addition_text)
+        for file in files_loaded:
+            files[file] = files_loaded[file]
+        printProgressBar(i, len(contacts), prefix='Скачаны все файлы по:', suffix='контактов', length=50)
+
+
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          '\nЗагружаем бэкап задач из выгрузки всех задач (task.getMulti скорректированной task.get) через АПИ ПФ')
+    tasks_full = {}
+    all_tasks_ids = set()
+    with open(os.path.join(PF_BACKUP_DIRECTORY, 'tasks_full.json'), 'r') as read_file:
+        tasks_full_str = json.load(read_file)
+    for task in tasks_full_str:
+        all_tasks_ids.add(int(task))
+        tasks_full[int(task)] = tasks_full_str[task]
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'), 'Из сохраненных полных (task.getMulti):', len(tasks_full))
+
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          '\nЗагружаем список файлов по каждой задаче')
+    printProgressBar(0, len(tasks_full), prefix='Скачаны все файлы по:', suffix='задач', length=50)
+    for i, task in enumerate(tasks_full):
+        addition_text = '<task><id>' + str(task) + '</id></task>' \
+                        + '<returnDownloadLinks>1</returnDownloadLinks>'
+        files_loaded = api_load_from_list('file.getListForTask', 'file', '', api_additionally=addition_text)
+        for file in files_loaded:
+            files[file] = files_loaded[file]
+        printProgressBar(i, len(tasks_full), prefix='Скачаны все файлы по:', suffix='задач', length=50)
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          'Загружаем дерево проектов (переименовал внутри flectra в hr.projectgroup)')
+    projectgroups = api_load_from_list('project.getList', 'project', 'projectgroups_full.json')
+
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          'Загружаем список файлов по каждому проекту')
+    printProgressBar(0, len(projectgroups), prefix='Скачаны все файлы по:', suffix='проектов', length=50)
+    for i, projectgroup in enumerate(projectgroups):
+        addition_text = '<project><id>' + str(projectgroup) + '</id></project>' \
+                        + '<returnDownloadLinks>1</returnDownloadLinks>'
+        files_loaded = api_load_from_list('file.getListForProject', 'file', '', api_additionally=addition_text)
+        for file in files_loaded:
+            files[file] = files_loaded[file]
+        printProgressBar(i, len(projectgroups), prefix='Скачаны все файлы по:', suffix='проектов', length=50)
+
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          '\nСохраняем результирующий список файлов')
+    with open(os.path.join(PF_BACKUP_DIRECTORY, 'files_full.json'), 'w') as write_file:
+        json.dump(files, write_file, ensure_ascii=False)
+
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          'Загружаем список справочников')
     handbooks = api_load_from_list('handbook.getList', 'handbook', '',pagination=False)
-    for handbook in handbooks:
+    printProgressBar(0, len(handbooks), prefix='Скачаны все записи по:', suffix='справочников', length=50)
+    for i, handbook in enumerate(handbooks):
         addition_text = '<handbook><id>' + str(handbook) + '</id></handbook>'
         records = api_load_from_list('handbook.getRecords', 'record', '', api_additionally=addition_text,
                                      with_totalcount=False, key_name='key')
         handbooks[handbook]['records'] = records
+        printProgressBar(i, len(handbooks), prefix='Скачаны все записи по:', suffix='справочников', length=50)
     with open(os.path.join(PF_BACKUP_DIRECTORY, 'handbooks_full.json'), 'w') as write_file:
         json.dump(handbooks, write_file, ensure_ascii=False)
 
-    # Загружаем список процессов и список статусов по каждому процессу
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          'Загружаем список процессов и список статусов по каждому процессу')
     processes = api_load_from_list('taskStatus.getSetList', 'taskStatusSet', 'processes_full.json',pagination=False)
     statuses = {}
     inactive = set()
-    for process in processes:
+    printProgressBar(0, len(processes), prefix='Скачаны все статусы по:', suffix='процессов', length=50)
+    for i, process in enumerate(processes):
         addition_text = '<taskStatusSet><id>' + str(process) + '</id></taskStatusSet>'
         statuses_loaded = api_load_from_list('taskStatus.getListOfSet', 'taskStatus', '',
                                       api_additionally=addition_text, pagination=False)
+        printProgressBar(i, len(processes), prefix='Скачаны все статусы по:', suffix='процессов', length=50)
         for status in statuses_loaded:
             if statuses_loaded[status]['isActive'] == '0':
                 inactive.add(int(status))
@@ -190,15 +251,16 @@ def reload_all():
     with open(os.path.join(PF_BACKUP_DIRECTORY, 'inactive_statuses.json'), 'w') as write_file:
         json.dump(list(inactive), write_file, ensure_ascii=False)
 
-    # Загружаем бэкап комментариев
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          '\nЗагружаем бэкап комментариев')
     actions = {}
     with open(os.path.join(PF_BACKUP_DIRECTORY, 'actions_full.json'), 'r') as read_file:
         actions_str = json.load(read_file)
     for action in actions_str:
         actions[int(action)] = actions_str[action]
-    print('Из сохраненных комментариев:', len(actions))
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'), 'Из сохраненных комментариев:', len(actions))
 
-    # Догружаем комментарии
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'), 'Догружаем комментарии')
     addition_text = '<fromDate>' \
                     + (datetime.strptime(actions[max(actions.keys())]['dateTime'], '%d-%m-%Y %H:%M') -
                        timedelta(minutes=1)).strftime('%d-%m-%Y %H:%M') \
@@ -208,22 +270,15 @@ def reload_all():
     api_load_from_list('action.getListByPeriod', 'action', 'users_full.json',
                        api_additionally=addition_text, res_dict=actions)
 
-    # Бэкап задач из выгрузки списка задач (task.getList)
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          'Загружаем бэкап задач из выгрузки списка задач (task.getList)')
     tasks_short = api_load_from_list('task.getList', 'task', 'tasks_short.json',
                                      api_additionally='<target>all</target>')
-    all_tasks_ids = set()
     for task in tasks_short:
         all_tasks_ids.add(int(task))
-    # Загружаем бэкап задач из выгрузки всех задач (task.getMulti скорректированной task.get) через АПИ ПФ
-    tasks_full = {}
-    with open(os.path.join(PF_BACKUP_DIRECTORY, 'tasks_full.json'), 'r') as read_file:
-        tasks_full_str = json.load(read_file)
-    for task in tasks_full_str:
-        all_tasks_ids.add(int(task))
-        tasks_full[int(task)] = tasks_full_str[task]
-    print('Из сохраненных полных (task.getMulti):', len(tasks_full))
 
-    # Догружаем найденные задачи в полный бэкап tasks_full_from_api_backup
+    print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+          'Догружаем найденные задачи в полный бэкап tasks_full_from_api_backup')
     not_finded_tasks_ids = set()
     deleted_tasks_ids = set()
     hundred4xml = []
@@ -293,7 +348,7 @@ def reload_all():
             if os.path.exists(os.path.join(PF_BACKUP_DIRECTORY, 'tasks_full_stop')):
                 raise ValueError
     finally:
-        print('Всего везде:', len(all_tasks_ids), 'Сохранено:', len(tasks_full), 'Не найдено:',
+        print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'), 'Всего везде:', len(all_tasks_ids), 'Сохранено:', len(tasks_full), 'Не найдено:',
               len(not_finded_tasks_ids))
         for task in tasks_full:             # Обновляем во всех задачах информацию из tasks_short_dict
             if tasks_short.get(task, None):
@@ -335,30 +390,9 @@ def reload_all():
             for task in tasks_full:
                 if task not in deleted_tasks_ids:
                     tasks_full_checked[task] = tasks_full[task]
-            print('Удалено:', len(deleted_tasks_ids), 'осталось:', len(tasks_full_checked))
+            print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'), 'Удалено:', len(deleted_tasks_ids), 'осталось:', len(tasks_full_checked))
             with open(os.path.join(PF_BACKUP_DIRECTORY, 'tasks_full.json'), 'w') as write_file:
                     json.dump(tasks_full_checked, write_file, ensure_ascii=False)
-
-    # Загружаем дерево проектов (переименовал внутри flectra в hr.projectgroup)
-    projectgroups = api_load_from_list('project.getList', 'project', 'projectgroups_full.json')
-    files = {}
-    # Загружаем список файлов по каждому проекту
-    for projectgroup in projectgroups:
-        addition_text = '<project><id>' + str(projectgroup) + '</id></project>' \
-                        + '<returnDownloadLinks>1</returnDownloadLinks>'
-        files_loaded = api_load_from_list('file.getListForProject', 'file', '', api_additionally=addition_text)
-        for file in files_loaded:
-            files[file] = files_loaded[file]
-    # Загружаем список файлов по каждой задаче
-    for task in tasks_full_checked:
-        addition_text = '<task><id>' + str(task) + '</id></task>' \
-                        + '<returnDownloadLinks>1</returnDownloadLinks>'
-        files_loaded = api_load_from_list('file.getListForTask', 'file', '', api_additionally=addition_text)
-        for file in files_loaded:
-            files[file] = files_loaded[file]
-    # Сохраняем результирующий список файлов
-    with open(os.path.join(PF_BACKUP_DIRECTORY, 'files_full.json'), 'w') as write_file:
-        json.dump(files, write_file, ensure_ascii=False)
 
 
 if __name__ == "__main__":
