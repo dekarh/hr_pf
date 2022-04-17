@@ -169,7 +169,8 @@ def reload_all():
     api_load_from_list('task.getList', 'task', 'tasktemplates_full.json',
                        api_additionally='<target>template</target>')
 
-    if_limit_owerfloved = """
+    task_numbers_from_loaded_files = set()
+    #if_limit_owerfloved = """
     print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
           'Загружаем ранее полученный из АПИ список файлов')
     files = {}
@@ -177,7 +178,10 @@ def reload_all():
         files_loaded = json.load(read_file)
     for file in files_loaded:
         files[int(file)] = files_loaded[file]
-    """
+        if files[int(file)].get('task', None):
+            if files[int(file)]['task'].get('id', None):
+                task_numbers_from_loaded_files.add(int(files[int(file)]['task']['id']))
+    #"""
 
     print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
           'Получаем из АПИ дерево проектов (переименовал внутри flectra в hr.projectgroup)')
@@ -185,7 +189,6 @@ def reload_all():
 
     print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
           'Получаем из АПИ список файлов по каждому проекту')
-    task_numbers_from_loaded_files = set()
     if not limit_overflow:
         printProgressBar(0, len(projectgroups) + 1, prefix='Скачаны все файлы по:', suffix='проектов', length=50)
         for i, projectgroup in enumerate(projectgroups):
@@ -199,9 +202,10 @@ def reload_all():
                     if files[file]['task'].get('id', None):
                         task_numbers_from_loaded_files.add(int(files[file]['task']['id']))
             printProgressBar(i, len(projectgroups) + 1, prefix='Скачаны все файлы по:', suffix='проектов', length=50)
-    task_numbers_from_loaded_files = tuple(task_numbers_from_loaded_files)
+
+    off = """
     print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
-          'Получаем из АПИ список файлов по каждому контакту')
+          '\nПолучаем из АПИ список файлов по каждому контакту')
     if not limit_overflow:
         printProgressBar(0, len(contacts) + 1, prefix='Скачаны все файлы по:', suffix='контактов', length=50)
         for i, contact in enumerate(contacts):
@@ -212,7 +216,12 @@ def reload_all():
             for file in files_loaded:
                 files[file] = files_loaded[file]
                 files[file]['contragent'] = contact
+                if files[file].get('task', None):
+                    if files[file]['task'].get('id', None):
+                        task_numbers_from_loaded_files.add(int(files[file]['task']['id']))
             printProgressBar(i, len(contacts) + 1, prefix='Скачаны все файлы по:', suffix='контактов', length=50)
+    task_numbers_from_loaded_files = tuple(task_numbers_from_loaded_files)
+    """
 
     print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
           '\nЗагружаем бэкап задач из выгрузки всех задач (task.getMulti скорректированной task.get) через АПИ ПФ')
@@ -225,13 +234,13 @@ def reload_all():
         tasks_full[int(task)] = tasks_full_str[task]
     print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'), 'Из сохраненных полных (task.getMulti):', len(tasks_full))
 
+    min_task = sorted(list(tasks_full.keys()))[20000]
     print(datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
           '\nПолучаем из АПИ файлы по каждой задаче')
-
     if not limit_overflow:
         printProgressBar(0, len(tasks_full) + 1, prefix='Скачаны все файлы по:', suffix='задач', length=50)
         for i, task in enumerate(tasks_full):
-            if task not in task_numbers_from_loaded_files:
+            if task not in task_numbers_from_loaded_files and task > min_task:
                 addition_text = '<task><id>' + str(task) + '</id></task>' \
                                 + '<returnDownloadLinks>1</returnDownloadLinks>'
                 files_loaded = api_load_from_list('file.getListForTask', 'file', '',
